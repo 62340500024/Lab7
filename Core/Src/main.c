@@ -133,21 +133,21 @@ int main(void) {
 //		}
 //Add LPF?
 		if (micros() - Timestamp_Encoder >= 1000) {
-			control_interrupt();
-			if (r > 0) {
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM1);
-				__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, PWM2);
-			}
-			if (r < 0) {
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM2);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, PWM1);
-						}
-			if (r == 0) {
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
-							__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
-						}
 			Timestamp_Encoder = micros();
 			EncoderVel = (EncoderVel * 999 + EncoderVelocity_Update()) / 1000.0;
+			control_interrupt();
+			/*if (r > 0) {
+			 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM1);
+			 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, PWM2);
+			 }
+			 if (r < 0) {
+			 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM2);
+			 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, PWM1);
+			 }
+			 if (r == 0) {
+			 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+			 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+			 }*/
 		}
 
 	}
@@ -448,19 +448,28 @@ uint64_t micros() {
 
 //double pu1=0,pe1=0,pe2=0;
 void control_interrupt() {
-	if (r > 0){
+	if (r > 0) {
 		error = r - EncoderVel;
-			sum_error = sum_error + error;
-			PWM1 = KP * error + KI * sum_error + KD * (error - perror);
-			perror = error;
+		sum_error = sum_error + error;
+		PWM1 = KP * error + KI * sum_error + KD * (error - perror);
+		perror = error;
+		if (PWM1 > 10000) {
+			PWM1 = 10000;
+		}
+		htim3.Instance->CCR1 = PWM1;
+		htim3.Instance->CCR2 = 0;
 	}
-	if (r < 0){
-		error = (r*-1) - (EncoderVel*-1);
-			sum_error = sum_error + error;
-			PWM1 = KP * error + KI * sum_error + KD * (error - perror);
-			perror = error;
+	if (r < 0) {
+		error = (r * -1) - (EncoderVel * -1);
+		sum_error = sum_error + error;
+		PWM1 = KP * error + KI * sum_error + KD * (error - perror);
+		perror = error;
+		if (PWM1 > 10000) {
+			PWM1 = 10000;
+		}
+		htim3.Instance->CCR2 = PWM1;
+		htim3.Instance->CCR1 = 0;
 	}
-
 
 //	double error = r-EncoderVel;
 //	PWM1 = pu1+(KP+KI+KD)*error-(KP+2*KD)*pe1+(KD*pe2);
